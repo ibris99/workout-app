@@ -60,9 +60,10 @@ function speakQ(text, lang = "fr-FR") {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang  = lang;
-  u.rate  = 1.6; // 1.4 si trop rapide
-  u.pitch = 1;
+  u.lang   = lang;
+  u.rate   = 1.6; // 1.4 si trop rapide
+  u.pitch  = 1;
+  u.volume = 1; // volume max — en app native, on utilisera Audio Focus (Android) / AVAudioSession (iOS) pour baisser la musique et mettre la voix au premier plan
   window.speechSynthesis.speak(u);
 }
 
@@ -249,7 +250,7 @@ function SessionScreen({ items, onClose }) {
         <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: 2 }}>
           {isDone ? "Terminé" : launching ? "Démarrage" : `${doneTSteps} / ${timerSteps.length}`}
         </span>
-        <button onClick={stop} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
+        <button onClick={stop} style={{ background: "none", border: "1px solid #fff", borderRadius: 6, color: "#fff", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
       </div>
 
       {/* Progress bar */}
@@ -311,7 +312,7 @@ function SessionScreen({ items, onClose }) {
                 Suivant → {step.nextAnnounce}
               </div>
             )}
-            <button onClick={skip} style={{ marginTop: 24, padding: "10px 28px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#111", color: "#444", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
+            <button onClick={skip} style={{ marginTop: 24, padding: "10px 28px", borderRadius: 8, border: "1px solid #fff", background: "#111", color: "#fff", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
               Passer →
             </button>
           </div>
@@ -754,4 +755,6 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+window.addEventListener('load', () => {
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+});
