@@ -515,7 +515,7 @@ function CreateExerciseModal({ onClose, onCreate }) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default function App() {
+function App() {
   const [tab,         setTab]         = useState("builder");
   const [catFilter,   setCatFilter]   = useState("Tous");
   const [search,      setSearch]      = useState("");
