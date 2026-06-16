@@ -515,7 +515,7 @@ function CreateExerciseModal({ onClose, onCreate }) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-function App() {
+export default function App() {
   const [tab,         setTab]         = useState("builder");
   const [catFilter,   setCatFilter]   = useState("Tous");
   const [search,      setSearch]      = useState("");
@@ -755,6 +755,4 @@ function App() {
   );
 }
 
-window.addEventListener('load', () => {
-  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-});
+
