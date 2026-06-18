@@ -514,7 +514,7 @@ function CreateExerciseModal({ onClose, onCreate }) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default function App() {
+function App() {
   const [tab,         setTab]         = useState("builder");
   const [catFilter,   setCatFilter]   = useState("Tous");
   const [search,      setSearch]      = useState("");
@@ -537,6 +537,7 @@ export default function App() {
     (catFilter === "Tous" || ex.category === catFilter) &&
     ex.name.toLowerCase().includes(search.toLowerCase())
   );
+  window.App = App;
 
   const addExercise    = (ex)        => setItems(prev => [...prev, { id: uid(), exercise: ex, config: makeSet(ex.type) }]);
   const removeExercise = (id)        => setItems(prev => prev.filter(i => i.id !== id));
