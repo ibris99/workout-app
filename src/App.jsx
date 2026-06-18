@@ -537,7 +537,6 @@ function App() {
     (catFilter === "Tous" || ex.category === catFilter) &&
     ex.name.toLowerCase().includes(search.toLowerCase())
   );
-  window.App = App;
 
   const addExercise    = (ex)        => setItems(prev => [...prev, { id: uid(), exercise: ex, config: makeSet(ex.type) }]);
   const removeExercise = (id)        => setItems(prev => prev.filter(i => i.id !== id));
@@ -754,3 +753,5 @@ function App() {
     </>
   );
 }
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
