@@ -1,4 +1,4 @@
-const { useState, useEffect, useRef, useCallback } = React;
+import { useState, useEffect, useRef, useCallback } from "react";
 
 // ─── EXERCISE DATABASE ────────────────────────────────────────────────────────
 const EXERCISE_DB = [
@@ -514,7 +514,7 @@ function CreateExerciseModal({ onClose, onCreate }) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-function App() {
+export default function App() {
   const [tab,         setTab]         = useState("builder");
   const [catFilter,   setCatFilter]   = useState("Tous");
   const [search,      setSearch]      = useState("");
@@ -753,5 +753,3 @@ function App() {
     </>
   );
 }
-
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
