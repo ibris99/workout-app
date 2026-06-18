@@ -93,22 +93,22 @@ function buildSteps(items) {
     if (ex.type === "hiit") {
       for (let r = 0; r < cfg.rounds; r++) {
         const nextIsRest = r < cfg.rounds - 1 || !isLast;
-        timerSteps.push({ kind: "timer", phase: "work", label: "TRAVAIL", sublabel: name, icon: "🔥", duration: cfg.work, nextAnnounce: nextIsRest ? "Repos" : null });
+        timerSteps.push({ kind: "timer", phase: "work", label: "TRAVAIL", sublabel: name, icon: "🔥", duration: cfg.work, nextAnnounce: nextIsRest ? "Récupération" : null });
         if (nextIsRest) {
           // figure out what comes after rest
           const isLastRound = r === cfg.rounds - 1;
           const nextName = isLastRound ? (items[idx + 1] ? (items[idx + 1].label ?? items[idx + 1].exercise.name) : null) : name;
-          timerSteps.push({ kind: "timer", phase: "rest", label: "REPOS", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? "Travail" });
+          timerSteps.push({ kind: "timer", phase: "rest", label: "RÉCUPÉRATION", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? "Travail" });
         }
       }
     } else if (ex.type === "time") {
       for (let s = 0; s < cfg.sets; s++) {
         const nextIsRest = s < cfg.sets - 1 || !isLast;
-        timerSteps.push({ kind: "timer", phase: "work", label: name, sublabel: `Série ${s + 1} / ${cfg.sets}`, icon: ex.icon, duration: cfg.duration, nextAnnounce: nextIsRest ? "Repos" : null });
+        timerSteps.push({ kind: "timer", phase: "work", label: name, sublabel: `Série ${s + 1} / ${cfg.sets}`, icon: ex.icon, duration: cfg.duration, nextAnnounce: nextIsRest ? "Récupération" : null });
         if (nextIsRest) {
           const isLastSet = s === cfg.sets - 1;
           const nextName = isLastSet ? (items[idx + 1] ? (items[idx + 1].label ?? items[idx + 1].exercise.name) : null) : name;
-          timerSteps.push({ kind: "timer", phase: "rest", label: "REPOS", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? name });
+          timerSteps.push({ kind: "timer", phase: "rest", label: "RÉCUPÉRATION", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? name });
         }
       }
     } else {
