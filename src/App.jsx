@@ -60,9 +60,10 @@ function speakQ(text, lang = "fr-FR") {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang  = lang;
-  u.rate  = 1.6; // 1.4 si trop rapide
-  u.pitch = 1;
+  u.lang   = lang;
+  u.rate   = 1.6; // 1.4 si trop rapide
+  u.pitch  = 1;
+  u.volume = 1; // volume max — en app native, on utilisera Audio Focus (Android) / AVAudioSession (iOS) pour baisser la musique et mettre la voix au premier plan
   window.speechSynthesis.speak(u);
 }
 
@@ -93,22 +94,22 @@ function buildSteps(items) {
     if (ex.type === "hiit") {
       for (let r = 0; r < cfg.rounds; r++) {
         const nextIsRest = r < cfg.rounds - 1 || !isLast;
-        timerSteps.push({ kind: "timer", phase: "work", label: "TRAVAIL", sublabel: name, icon: "🔥", duration: cfg.work, nextAnnounce: nextIsRest ? "Repos" : null });
+        timerSteps.push({ kind: "timer", phase: "work", label: "TRAVAIL", sublabel: name, icon: "🔥", duration: cfg.work, nextAnnounce: nextIsRest ? "Récupération" : null });
         if (nextIsRest) {
           // figure out what comes after rest
           const isLastRound = r === cfg.rounds - 1;
           const nextName = isLastRound ? (items[idx + 1] ? (items[idx + 1].label ?? items[idx + 1].exercise.name) : null) : name;
-          timerSteps.push({ kind: "timer", phase: "rest", label: "REPOS", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? "Travail" });
+          timerSteps.push({ kind: "timer", phase: "rest", label: "RÉCUPÉRATION", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? "Travail" });
         }
       }
     } else if (ex.type === "time") {
       for (let s = 0; s < cfg.sets; s++) {
         const nextIsRest = s < cfg.sets - 1 || !isLast;
-        timerSteps.push({ kind: "timer", phase: "work", label: name, sublabel: `Série ${s + 1} / ${cfg.sets}`, icon: ex.icon, duration: cfg.duration, nextAnnounce: nextIsRest ? "Repos" : null });
+        timerSteps.push({ kind: "timer", phase: "work", label: name, sublabel: `Série ${s + 1} / ${cfg.sets}`, icon: ex.icon, duration: cfg.duration, nextAnnounce: nextIsRest ? "Récupération" : null });
         if (nextIsRest) {
           const isLastSet = s === cfg.sets - 1;
           const nextName = isLastSet ? (items[idx + 1] ? (items[idx + 1].label ?? items[idx + 1].exercise.name) : null) : name;
-          timerSteps.push({ kind: "timer", phase: "rest", label: "REPOS", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? name });
+          timerSteps.push({ kind: "timer", phase: "rest", label: "RÉCUPÉRATION", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? name });
         }
       }
     } else {
@@ -249,7 +250,7 @@ function SessionScreen({ items, onClose }) {
         <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: 2 }}>
           {isDone ? "Terminé" : launching ? "Démarrage" : `${doneTSteps} / ${timerSteps.length}`}
         </span>
-        <button onClick={stop} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
+        <button onClick={stop} style={{ background: "none", border: "1px solid #fff", borderRadius: 6, color: "#fff", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
       </div>
 
       {/* Progress bar */}
@@ -311,7 +312,7 @@ function SessionScreen({ items, onClose }) {
                 Suivant → {step.nextAnnounce}
               </div>
             )}
-            <button onClick={skip} style={{ marginTop: 24, padding: "10px 28px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#111", color: "#444", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
+            <button onClick={skip} style={{ marginTop: 24, padding: "10px 28px", borderRadius: 8, border: "1px solid #fff", background: "#111", color: "#fff", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
               Passer →
             </button>
           </div>
@@ -754,4 +755,4 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+
