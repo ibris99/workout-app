@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+const { useState, useEffect, useRef, useCallback } = React;
 
 // ─── EXERCISE DATABASE ────────────────────────────────────────────────────────
 const EXERCISE_DB = [
