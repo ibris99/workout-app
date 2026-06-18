@@ -55,18 +55,16 @@ function uid() { return Math.random().toString(36).slice(2, 9); }
 function load(key, fb) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch { return fb; } }
 function persist(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
-// speak without cancelling ongoing speech — fire and forget
 function speakQ(text, lang = "fr-FR") {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang  = lang;
-  u.rate  = 1.6; // 1.4 si trop rapide
+  u.rate  = 1.6;
   u.pitch = 1;
   window.speechSynthesis.speak(u);
 }
 
-// speak and wait (used only for launch countdown)
 function speak(text, lang = "fr-FR") {
   return new Promise(resolve => {
     if (!window.speechSynthesis) { resolve(); return; }
@@ -77,12 +75,8 @@ function speak(text, lang = "fr-FR") {
   });
 }
 
-// ─── SESSION BUILDER ──────────────────────────────────────────────────────────
-// Steps: only "launch" (initial countdown screen) + "timer" (work/rest) + "reps" + "done"
 function buildSteps(items) {
   const steps = [];
-
-  // flatten items into timer/reps steps
   const timerSteps = [];
   items.forEach((item, idx) => {
     const ex  = item.exercise;
@@ -95,7 +89,6 @@ function buildSteps(items) {
         const nextIsRest = r < cfg.rounds - 1 || !isLast;
         timerSteps.push({ kind: "timer", phase: "work", label: "TRAVAIL", sublabel: name, icon: "🔥", duration: cfg.work, nextAnnounce: nextIsRest ? "Récupération" : null });
         if (nextIsRest) {
-          // figure out what comes after rest
           const isLastRound = r === cfg.rounds - 1;
           const nextName = isLastRound ? (items[idx + 1] ? (items[idx + 1].label ?? items[idx + 1].exercise.name) : null) : name;
           timerSteps.push({ kind: "timer", phase: "rest", label: "RÉCUPÉRATION", sublabel: name, icon: "😮‍💨", duration: cfg.rest, nextAnnounce: nextName ?? "Travail" });
@@ -116,7 +109,6 @@ function buildSteps(items) {
     }
   });
 
-  // first step: launch countdown screen, knows first exercise name
   const firstName = items.length > 0 ? (items[0].label ?? items[0].exercise.name) : "Go";
   steps.push({ kind: "launch", firstName });
   timerSteps.forEach(s => steps.push(s));
@@ -124,25 +116,21 @@ function buildSteps(items) {
   return steps;
 }
 
-// ─── SESSION SCREEN ───────────────────────────────────────────────────────────
 function SessionScreen({ items, onClose }) {
   const steps    = useRef(buildSteps(items));
   const [stepIdx,    setStepIdx]    = useState(0);
   const [timeLeft,   setTimeLeft]   = useState(null);
-  const [cdN,        setCdN]        = useState(null); // launch countdown display
-  const [launching,  setLaunching]  = useState(true); // showing launch screen
+  const [cdN,        setCdN]        = useState(null);
+  const [launching,  setLaunching]  = useState(true);
   const abortRef  = useRef(false);
   const timerRef  = useRef(null);
-  const spokenRef = useRef(false); // guard: only speak countdown once per step
+  const spokenRef = useRef(false);
 
   const step = steps.current[stepIdx];
-
-  // Progress
   const timerSteps = steps.current.filter(s => s.kind === "timer");
   const doneTSteps = steps.current.slice(0, stepIdx).filter(s => s.kind === "timer").length;
   const progress   = timerSteps.length > 0 ? doneTSteps / timerSteps.length : 0;
 
-  // ── launch countdown then jump to first real step
   async function startSession() {
     abortRef.current = false;
     window.speechSynthesis.cancel();
@@ -168,7 +156,6 @@ function SessionScreen({ items, onClose }) {
     runStep(1);
   }
 
-  // ── run a step by index
   function runStep(idx) {
     if (abortRef.current) return;
     const s = steps.current[idx];
@@ -183,8 +170,6 @@ function SessionScreen({ items, onClose }) {
         if (abortRef.current) { clearInterval(timerRef.current); return; }
         t--;
         setTimeLeft(t);
-
-        // Vocal countdown on last 5 seconds — exactly 1s per digit
         if (t === 5 && !spokenRef.current && s.nextAnnounce) {
           spokenRef.current = true;
           [5, 4, 3, 2, 1].forEach((n, i) => {
@@ -192,17 +177,11 @@ function SessionScreen({ items, onClose }) {
           });
           setTimeout(() => { if (!abortRef.current && s.nextAnnounce) speakQ(s.nextAnnounce); }, 5000);
         }
-
-        if (t <= 0) {
-          clearInterval(timerRef.current);
-          runStep(idx + 1);
-        }
+        if (t <= 0) { clearInterval(timerRef.current); runStep(idx + 1); }
       }, 1000);
-
     } else if (s.kind === "reps") {
       setTimeLeft(null);
       speakQ(s.label);
-
     } else if (s.kind === "done") {
       setTimeLeft(null);
       speakQ("Workout terminé, bravo !");
@@ -235,7 +214,7 @@ function SessionScreen({ items, onClose }) {
   const isDone  = step?.kind === "done";
   const isWork  = step?.phase === "work";
   const isRest  = step?.phase === "rest";
-  const accent  = isRest ? "#00D9FF" : isWork ? "#FF0033" : isDone ? "#e8ff47" : "#e8ff47";
+  const accent  = isRest ? "#00D9FF" : isWork ? "#FF0033" : "#e8ff47";
 
   const radius  = 90;
   const circ    = 2 * Math.PI * radius;
@@ -246,28 +225,28 @@ function SessionScreen({ items, onClose }) {
 
       {/* Top bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px", borderBottom: "1px solid #1a1a1a" }}>
-        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: 2 }}>
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#fff", textTransform: "uppercase", letterSpacing: 2 }}>
           {isDone ? "Terminé" : launching ? "Démarrage" : `${doneTSteps} / ${timerSteps.length}`}
         </span>
         <button onClick={stop} style={{ background: "none", border: "1px solid #fff", borderRadius: 6, color: "#fff", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar — jaune */}
       <div style={{ height: 2, background: "#1a1a1a" }}>
-        <div style={{ height: "100%", width: `${progress * 100}%`, background: accent, transition: "width .5s" }} />
+        <div style={{ height: "100%", width: `${progress * 100}%`, background: "#e8ff47", transition: "width .5s" }} />
       </div>
 
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px" }}>
 
-        {/* ── LAUNCH SCREEN ── */}
+        {/* LAUNCH */}
         {launching && (
           <div style={{ textAlign: "center" }}>
             {cdN === null ? (
               <>
                 <div style={{ fontSize: 56, marginBottom: 16 }}>⚡</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>Prêt ?</div>
-                <div style={{ fontSize: 12, color: "#444", fontFamily: "'Space Mono', monospace", marginBottom: 32 }}>
+                <div style={{ fontSize: 12, color: "#fff", fontFamily: "'Space Mono', monospace", marginBottom: 32 }}>
                   {items.length} exercices · {timerSteps.length} blocs chrono
                 </div>
                 <button onClick={startSession} style={{ padding: "16px 48px", borderRadius: 12, border: "none", background: "#e8ff47", color: "#000", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "'Space Mono', monospace", letterSpacing: 1 }}>
@@ -276,7 +255,7 @@ function SessionScreen({ items, onClose }) {
               </>
             ) : (
               <>
-                <div style={{ fontSize: 13, color: "#555", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 3, marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: "#fff", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 3, marginBottom: 20 }}>
                   {steps.current[0].firstName}
                 </div>
                 <div style={{ fontSize: 140, fontWeight: 900, color: "#e8ff47", fontFamily: "'Space Mono', monospace", lineHeight: 1 }}>{cdN}</div>
@@ -285,13 +264,16 @@ function SessionScreen({ items, onClose }) {
           </div>
         )}
 
-        {/* ── TIMER ── */}
+        {/* TIMER */}
         {!launching && isTimer && (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 13, color: accent, fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 3, marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: "#fff", fontFamily: "'Space Mono', monospace", marginBottom: 8 }}>
+              {doneTSteps} / {timerSteps.length}
+            </div>
+            <div style={{ fontSize: 18, color: accent, fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 3, marginBottom: 4, fontWeight: 700 }}>
               {step.label}
             </div>
-            <div style={{ fontSize: 11, color: "#333", fontFamily: "'Space Mono', monospace", marginBottom: 24 }}>
+            <div style={{ fontSize: 13, color: "#fff", fontFamily: "'Space Mono', monospace", marginBottom: 20 }}>
               {step.sublabel}
             </div>
             <div style={{ position: "relative", width: 220, height: 220, margin: "0 auto" }}>
@@ -303,41 +285,41 @@ function SessionScreen({ items, onClose }) {
               </svg>
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ fontSize: 64, fontWeight: 900, color: "#fff", fontFamily: "'Space Mono', monospace", lineHeight: 1 }}>{timeLeft}</div>
-                <div style={{ fontSize: 12, color: "#444", fontFamily: "'Space Mono', monospace", marginTop: 4 }}>sec</div>
+                <div style={{ fontSize: 12, color: "#fff", fontFamily: "'Space Mono', monospace", marginTop: 4 }}>sec</div>
               </div>
             </div>
             {step.nextAnnounce && (
-              <div style={{ marginTop: 16, fontSize: 11, color: "#333", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 2 }}>
+              <div style={{ marginTop: 16, fontSize: 11, color: "#fff", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 2 }}>
                 Suivant → {step.nextAnnounce}
               </div>
             )}
-            <button onClick={skip} style={{ marginTop: 24, padding: "10px 28px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#111", color: "#444", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
+            <button onClick={skip} style={{ marginTop: 24, padding: "10px 28px", borderRadius: 8, border: "1px solid #e8ff47", background: "#111", color: "#e8ff47", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
               Passer →
             </button>
           </div>
         )}
 
-        {/* ── REPS ── */}
+        {/* REPS */}
         {!launching && isReps && (
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>{step.icon}</div>
             <div style={{ fontSize: 24, fontWeight: 900, color: "#fff", marginBottom: 4, fontFamily: "'DM Sans', sans-serif" }}>{step.label}</div>
-            <div style={{ fontSize: 13, color: "#555", fontFamily: "'Space Mono', monospace", marginBottom: 8 }}>
+            <div style={{ fontSize: 13, color: "#fff", fontFamily: "'Space Mono', monospace", marginBottom: 8 }}>
               {step.config.sets} × {step.config.reps} reps{step.config.weight > 0 ? ` · ${step.config.weight}kg` : ""}
             </div>
-            <div style={{ fontSize: 11, color: "#333", fontFamily: "'Space Mono', monospace", marginBottom: 32 }}>Repos : {step.config.rest}s</div>
-            <button onClick={skip} style={{ padding: "12px 32px", borderRadius: 10, border: "1px solid #e8ff4740", background: "#e8ff4710", color: "#e8ff47", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
+            <div style={{ fontSize: 11, color: "#fff", fontFamily: "'Space Mono', monospace", marginBottom: 32 }}>Repos : {step.config.rest}s</div>
+            <button onClick={skip} style={{ padding: "12px 32px", borderRadius: 10, border: "1px solid #e8ff47", background: "#111", color: "#e8ff47", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
               Suivant →
             </button>
           </div>
         )}
 
-        {/* ── DONE ── */}
+        {/* DONE */}
         {isDone && (
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 72, marginBottom: 16 }}>🏆</div>
             <div style={{ fontSize: 28, fontWeight: 900, color: "#e8ff47", marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>Workout terminé !</div>
-            <div style={{ fontSize: 12, color: "#444", fontFamily: "'Space Mono', monospace", marginBottom: 40 }}>{items.length} exercices complétés</div>
+            <div style={{ fontSize: 12, color: "#fff", fontFamily: "'Space Mono', monospace", marginBottom: 40 }}>{items.length} exercices complétés</div>
             <button onClick={stop} style={{ padding: "14px 40px", borderRadius: 10, border: "none", background: "#e8ff47", color: "#000", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "'Space Mono', monospace" }}>
               Retour
             </button>
@@ -348,7 +330,6 @@ function SessionScreen({ items, onClose }) {
   );
 }
 
-// ─── BADGE ────────────────────────────────────────────────────────────────────
 function Badge({ cat, custom }) {
   const c = custom ? { bg: "#e8ff4720", text: "#e8ff47", border: "#e8ff4740" } : (CAT_COLORS[cat] || {});
   return (
@@ -388,7 +369,7 @@ function ExerciseCard({ ex, onAdd, onDelete }) {
         </div>
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        {ex.custom && <button onClick={() => onDelete(ex.id)} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 5, color: "#444", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>🗑</button>}
+        {ex.custom && <button onClick={() => onDelete(ex.id)} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 5, color: "#fff", cursor: "pointer", fontSize: 12, padding: "2px 6px" }}>🗑</button>}
         <button onClick={() => onAdd(ex)} style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "#e8ff47", color: "#000", fontWeight: 900, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
       </div>
     </div>
@@ -430,7 +411,7 @@ function WorkoutExercise({ item, onRemove, onUpdate, onDragStart, onDragOver, on
           )}
           <Badge cat={ex.category} custom={ex.custom} />
         </div>
-        <button onClick={() => onRemove(item.id)} style={{ background: "none", border: "none", color: "#444", cursor: "pointer", fontSize: 18, flexShrink: 0 }}>×</button>
+        <button onClick={() => onRemove(item.id)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 18, flexShrink: 0 }}>×</button>
       </div>
       <div style={{ padding: "12px 14px" }}>
         {isHIIT && (
@@ -479,13 +460,13 @@ function CreateExerciseModal({ onClose, onCreate }) {
   }
   const label = { fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'Space Mono', monospace", display: "block", marginBottom: 6 };
   const inp   = { width: "100%", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 7, padding: "10px 12px", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'DM Sans', sans-serif" };
-  const pill  = (a) => ({ padding: "6px 14px", borderRadius: 20, border: "1px solid", borderColor: a ? "#e8ff47" : "#2a2a2a", background: a ? "#e8ff4715" : "transparent", color: a ? "#e8ff47" : "#555", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace", transition: "all .15s" });
+  const pill  = (a) => ({ padding: "6px 14px", borderRadius: 20, border: "1px solid", borderColor: a ? "#e8ff47" : "#2a2a2a", background: a ? "#e8ff4715" : "transparent", color: a ? "#e8ff47" : "#fff", fontSize: 11, cursor: "pointer", fontFamily: "'Space Mono', monospace", transition: "all .15s" });
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ width: "100%", maxWidth: 430, background: "#0f0f0f", borderRadius: "16px 16px 0 0", border: "1px solid #2a2a2a", padding: "20px 20px 36px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "'DM Sans', sans-serif" }}>Nouvel exercice</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", fontSize: 22, cursor: "pointer" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer" }}>×</button>
         </div>
         <div style={{ marginBottom: 16 }}>
           <span style={label}>Nom</span>
@@ -513,7 +494,6 @@ function CreateExerciseModal({ onClose, onCreate }) {
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function App() {
   const [tab,         setTab]         = useState("builder");
   const [catFilter,   setCatFilter]   = useState("Tous");
@@ -524,7 +504,7 @@ function App() {
   const [editingName, setEditingName] = useState(false);
   const [showCreate,  setShowCreate]  = useState(false);
   const [session,     setSession]     = useState(null);
-  const [editingWorkoutId, setEditingWorkoutId] = useState(null); // null | items[]
+  const [editingWorkoutId, setEditingWorkoutId] = useState(null);
 
   const [savedWorkouts,   setSavedWorkouts]   = useState(() => load("wk_workouts", []));
   const [customExercises, setCustomExercises] = useState(() => load("wk_custom_ex", []));
@@ -541,7 +521,6 @@ function App() {
   const addExercise    = (ex)        => setItems(prev => [...prev, { id: uid(), exercise: ex, config: makeSet(ex.type) }]);
   const removeExercise = (id)        => setItems(prev => prev.filter(i => i.id !== id));
   const updateExercise = (id, patch) => {
-    // patch may contain config keys OR label
     const { label, ...configPatch } = patch;
     setItems(prev => prev.map(i => {
       if (i.id !== id) return i;
@@ -555,7 +534,6 @@ function App() {
   const createCustom   = (ex)        => setCustomExercises(prev => [...prev, ex]);
   const deleteCustom   = (id)        => setCustomExercises(prev => prev.filter(e => e.id !== id));
 
-  // ── Drag & Drop ────────────────────────────────────────────────────────────
   const dragId  = useRef(null);
   const [overI, setOverId] = useState(null);
 
@@ -579,7 +557,6 @@ function App() {
     if (!items.length) return;
     const date = new Date().toLocaleDateString("fr-CA");
     if (editingWorkoutId) {
-      // Écrase le workout existant, conserve sa position dans la liste
       setSavedWorkouts(prev => prev.map(w =>
         w.id === editingWorkoutId ? { ...w, name: workoutName, items: [...items], date } : w
       ));
@@ -613,10 +590,10 @@ function App() {
     root:     { minHeight: "100vh", background: "#080808", color: "#fff", fontFamily: "'DM Sans', sans-serif", maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" },
     header:   { padding: "18px 16px 10px", background: "#080808", borderBottom: "1px solid #1a1a1a", position: "sticky", top: 0, zIndex: 50 },
     tabBar:   { display: "flex", border: "1px solid #222", borderRadius: 8, overflow: "hidden" },
-    tab:  (a) => ({ flex: 1, padding: "8px 0", border: "none", cursor: "pointer", background: a ? "#e8ff47" : "#111", color: a ? "#000" : "#555", fontWeight: 700, fontSize: 12, fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1, transition: "all .15s" }),
+    tab:  (a) => ({ flex: 1, padding: "8px 0", border: "none", cursor: "pointer", background: a ? "#e8ff47" : "#111", color: a ? "#000" : "#fff", fontWeight: 700, fontSize: 12, fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1, transition: "all .15s" }),
     body:     { flex: 1, overflowY: "auto", padding: "0 0 90px" },
-    secTitle: { fontSize: 10, fontWeight: 700, color: "#444", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Space Mono', monospace", padding: "14px 16px 8px" },
-    catPill:(a)=> ({ padding: "5px 12px", borderRadius: 20, border: "1px solid", borderColor: a ? "#e8ff47" : "#2a2a2a", background: a ? "#e8ff4715" : "transparent", color: a ? "#e8ff47" : "#555", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'Space Mono', monospace", transition: "all .15s" }),
+    secTitle: { fontSize: 10, fontWeight: 700, color: "#fff", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Space Mono', monospace", padding: "14px 16px 8px" },
+    catPill:  (a) => ({ padding: "5px 12px", borderRadius: 20, border: "1px solid", borderColor: a ? "#e8ff47" : "#2a2a2a", background: a ? "#e8ff4715" : "transparent", color: a ? "#e8ff47" : "#fff", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'Space Mono', monospace", transition: "all .15s" }),
     searchBox: { width: "100%", background: "#111", border: "1px solid #222", borderRadius: 8, padding: "9px 14px", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "'DM Sans', sans-serif" },
   };
 
@@ -633,7 +610,7 @@ function App() {
               <span style={{ fontSize: 20 }}>⚡</span>
               <span style={{ fontWeight: 900, fontSize: 17, letterSpacing: -0.5 }}>WORK<span style={{ color: "#e8ff47" }}>OUT</span></span>
             </div>
-            {items.length > 0 && <span style={{ fontSize: 10, color: "#555", fontFamily: "'Space Mono', monospace" }}>{items.length} ex · ~{totalMins}min</span>}
+            {items.length > 0 && <span style={{ fontSize: 10, color: "#fff", fontFamily: "'Space Mono', monospace" }}>{items.length} ex · ~{totalMins}min</span>}
           </div>
           <div style={S.tabBar}>
             <button style={S.tab(tab === "builder")}  onClick={() => setTab("builder")}>Builder</button>
@@ -652,7 +629,7 @@ function App() {
                 ) : (
                   <div onClick={() => setEditingName(true)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#fff" }}>{workoutName}</h2>
-                    <span style={{ fontSize: 12, color: "#444" }}>✏️</span>
+                    <span style={{ fontSize: 12, color: "#fff" }}>✏️</span>
                   </div>
                 )}
               </div>
@@ -673,7 +650,7 @@ function App() {
                 <div style={S.secTitle}>Catalogue {customExercises.length > 0 && <span style={{ color: "#e8ff47" }}>+{customExercises.length}</span>}</div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => setShowCreate(true)} style={{ background: "#e8ff4715", border: "1px solid #e8ff4740", borderRadius: 6, color: "#e8ff47", padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>+ Créer</button>
-                  <button onClick={() => setShowCatalog(p => !p)} style={{ background: "none", border: "1px solid #222", borderRadius: 6, color: "#555", padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>{showCatalog ? "Masquer" : "Afficher"}</button>
+                  <button onClick={() => setShowCatalog(p => !p)} style={{ background: "none", border: "1px solid #fff", borderRadius: 6, color: "#fff", padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>{showCatalog ? "Masquer" : "Afficher"}</button>
                 </div>
               </div>
 
@@ -684,13 +661,12 @@ function App() {
                     {CATEGORIES.map(c => <button key={c} style={S.catPill(catFilter === c)} onClick={() => setCatFilter(c)}>{c}</button>)}
                   </div>
                   {filtered.length === 0
-                    ? <div style={{ color: "#444", textAlign: "center", padding: "24px 0", fontFamily: "'Space Mono', monospace", fontSize: 12 }}>Aucun exercice trouvé</div>
+                    ? <div style={{ color: "#fff", textAlign: "center", padding: "24px 0", fontFamily: "'Space Mono', monospace", fontSize: 12 }}>Aucun exercice trouvé</div>
                     : filtered.map(ex => <ExerciseCard key={ex.id} ex={ex} onAdd={addExercise} onDelete={deleteCustom} />)
                   }
                 </div>
               )}
 
-              {/* Bottom buttons */}
               <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 32px)", maxWidth: 398, display: "flex", gap: 8, zIndex: 100 }}>
                 <button onClick={saveWorkout} disabled={!items.length} style={{ flex: 1, padding: "14px 0", borderRadius: 10, border: "none", background: items.length > 0 ? "#e8ff47" : "#1a1a1a", color: items.length > 0 ? "#000" : "#333", fontWeight: 900, fontSize: 13, cursor: items.length > 0 ? "pointer" : "default", fontFamily: "'Space Mono', monospace", transition: "all .2s" }}>
                   {items.length > 0 ? (editingWorkoutId ? `💾 Écraser` : `💾 Sauvegarder`) : "Ajoutez des exercices"}
@@ -707,7 +683,7 @@ function App() {
           {tab === "workouts" && (
             <div style={{ padding: "0 16px" }}>
               {savedWorkouts.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "60px 20px", color: "#333", fontFamily: "'Space Mono', monospace", fontSize: 12, lineHeight: 2 }}>
+                <div style={{ textAlign: "center", padding: "60px 20px", color: "#fff", fontFamily: "'Space Mono', monospace", fontSize: 12, lineHeight: 2 }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
                   Aucun workout sauvegardé.<br />Créez-en un dans le builder !
                 </div>
@@ -719,14 +695,14 @@ function App() {
                       <div style={{ padding: "12px 14px", background: "#141414", borderBottom: "1px solid #1e1e1e", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{w.name}</div>
-                          <div style={{ fontSize: 10, color: "#444", fontFamily: "'Space Mono', monospace", marginTop: 2 }}>{w.date} · {w.items.length} ex · ~{wMins(w.items)}min</div>
+                          <div style={{ fontSize: 10, color: "#fff", fontFamily: "'Space Mono', monospace", marginTop: 2 }}>{w.date} · {w.items.length} ex · ~{wMins(w.items)}min</div>
                         </div>
-                        <button onClick={() => deleteWorkout(w.id)} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>🗑</button>
+                        <button onClick={() => deleteWorkout(w.id)} style={{ background: "none", border: "1px solid #fff", borderRadius: 6, color: "#fff", padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>🗑</button>
                       </div>
                       <div style={{ padding: "10px 14px" }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
                           {w.items.map(i => (
-                            <span key={i.id} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "#1a1a1a", color: "#666", border: "1px solid #222", fontFamily: "'Space Mono', monospace" }}>
+                            <span key={i.id} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "#1a1a1a", color: "#fff", border: "1px solid #333", fontFamily: "'Space Mono', monospace" }}>
                               {i.exercise.icon} {i.exercise.name}
                             </span>
                           ))}
