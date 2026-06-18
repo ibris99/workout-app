@@ -249,7 +249,7 @@ function SessionScreen({ items, onClose }) {
         <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: 2 }}>
           {isDone ? "Terminé" : launching ? "Démarrage" : `${doneTSteps} / ${timerSteps.length}`}
         </span>
-        <button onClick={stop} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
+        <button onClick={stop} style={{ background: "none", border: "1px solid #fff", borderRadius: 6, color: "#fff", padding: "4px 12px", cursor: "pointer", fontSize: 11, fontFamily: "'Space Mono', monospace" }}>Arrêter</button>
       </div>
 
       {/* Progress bar */}
