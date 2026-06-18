@@ -10,12 +10,289 @@
 </head>
 <body style="margin:0;background:#080808">
   <div id="root"></div>
-  <script type="text/babel" src="src/App.jsx" data-type="module"></script>
-  <script type="text/babel" data-type="module">
-    import App from './src/App.jsx';
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      React.createElement(App)
-    );
+  <script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const EXERCISE_DB = [
+  { id:"e12",name:"Running",category:"HIIT",type:"hiit",icon:"🏃",custom:false },
+  { id:"e1",name:"Bench Press",category:"Musculation",type:"reps",icon:"🤲",custom:false },
+  { id:"e2",name:"Squat",category:"Musculation",type:"reps",icon:"🦵",custom:false },
+  { id:"e3",name:"Deadlift",category:"Musculation",type:"reps",icon:"🏋️",custom:false },
+  { id:"e4",name:"Shoulder Press",category:"Musculation",type:"reps",icon:"🙆",custom:false },
+  { id:"e5",name:"Barbell Row",category:"Musculation",type:"reps",icon:"🏋️",custom:false },
+  { id:"e6",name:"Bicep Curl",category:"Musculation",type:"reps",icon:"💪",custom:false },
+  { id:"e7",name:"Tricep Extension",category:"Musculation",type:"reps",icon:"💪",custom:false },
+  { id:"e8",name:"Leg Press",category:"Musculation",type:"reps",icon:"🦵",custom:false },
+  { id:"e9",name:"Burpees",category:"HIIT",type:"hiit",icon:"🔥",custom:false },
+  { id:"e10",name:"Jump Squats",category:"HIIT",type:"hiit",icon:"🔥",custom:false },
+  { id:"e11",name:"Mountain Climbers",category:"HIIT",type:"hiit",icon:"⛰️",custom:false },
+  { id:"e13",name:"Box Jumps",category:"HIIT",type:"hiit",icon:"📦",custom:false },
+  { id:"e14",name:"Jumping Jacks",category:"HIIT",type:"hiit",icon:"⚡",custom:false },
+  { id:"e15",name:"Pull-up",category:"Calisthenics",type:"reps",icon:"➖",custom:false },
+  { id:"e16",name:"Muscle-up",category:"Calisthenics",type:"reps",icon:"➖",custom:false },
+  { id:"e17",name:"L-sit",category:"Calisthenics",type:"time",icon:"🟰",custom:false },
+  { id:"e18",name:"Ring Dips",category:"Calisthenics",type:"reps",icon:"⭕",custom:false },
+  { id:"e19",name:"Ring Row",category:"Calisthenics",type:"reps",icon:"⭕",custom:false },
+  { id:"e20",name:"Front Lever",category:"Calisthenics",type:"time",icon:"➖",custom:false },
+  { id:"e21",name:"Back Lever",category:"Calisthenics",type:"time",icon:"➖",custom:false },
+  { id:"e22",name:"Bar Hang",category:"Calisthenics",type:"time",icon:"➖",custom:false },
+  { id:"e23",name:"Push-up",category:"Bodyweight",type:"reps",icon:"🤲",custom:false },
+  { id:"e24",name:"Dips",category:"Bodyweight",type:"reps",icon:"🤲",custom:false },
+  { id:"e25",name:"Plank",category:"Bodyweight",type:"time",icon:"🧱",custom:false },
+  { id:"e26",name:"Hollow Hold",category:"Bodyweight",type:"time",icon:"🧱",custom:false },
+  { id:"e27",name:"Pistol Squat",category:"Bodyweight",type:"reps",icon:"🦵",custom:false },
+  { id:"e28",name:"Nordic Curl",category:"Bodyweight",type:"reps",icon:"🦵",custom:false },
+  { id:"e29",name:"Handstand Hold",category:"Bodyweight",type:"time",icon:"🤸",custom:false },
+  { id:"e30",name:"Glute Bridge",category:"Bodyweight",type:"reps",icon:"🍑",custom:false },
+];
+const CATS=["Tous","Musculation","HIIT","Calisthenics","Bodyweight"];
+const TYPES=["reps","time","hiit"];
+const ICONS=["💪","🦵","🤲","🏋️","🙆","🧱","🤸","🏃","🔥","⛰️","📦","⚡","➖","🟰","⭕","🍑","🧠","🫀","🦴","🔱","🎯","🏅","⚙️","🌊"];
+const CC={Musculation:{bg:"#FF6B3520",text:"#FF6B35",border:"#FF6B3540"},HIIT:{bg:"#FF003320",text:"#FF0033",border:"#FF003340"},Calisthenics:{bg:"#00D9FF20",text:"#00D9FF",border:"#00D9FF40"},Bodyweight:{bg:"#7FFF0020",text:"#7FFF00",border:"#7FFF0040"}};
+function makeSet(t){if(t==="hiit")return{work:40,rest:20,rounds:8};if(t==="time")return{duration:30,rest:60,sets:3};return{reps:10,weight:0,rest:90,sets:3};}
+function uid(){return Math.random().toString(36).slice(2,9);}
+function load(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function speakQ(text){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="fr-FR";u.rate=1.6;u.volume=1;window.speechSynthesis.speak(u);}
+function speakW(text){return new Promise(r=>{if(!window.speechSynthesis){r();return;}const u=new SpeechSynthesisUtterance(text);u.lang="fr-FR";u.rate=1.3;u.onend=r;u.onerror=r;window.speechSynthesis.speak(u);});}
+
+function buildSteps(items){
+  const steps=[];const ts=[];
+  items.forEach((item,idx)=>{
+    const ex=item.exercise;const cfg=item.config;const name=item.label??ex.name;const isLast=idx===items.length-1;
+    if(ex.type==="hiit"){for(let r=0;r<cfg.rounds;r++){const nr=r<cfg.rounds-1||!isLast;ts.push({kind:"timer",phase:"work",label:"TRAVAIL",sub:name,dur:cfg.work,next:nr?"Repos":null});if(nr){const nn=r===cfg.rounds-1?(items[idx+1]?(items[idx+1].label??items[idx+1].exercise.name):null):name;ts.push({kind:"timer",phase:"rest",label:"REPOS",sub:name,dur:cfg.rest,next:nn??"Travail"});}}}
+    else if(ex.type==="time"){for(let s=0;s<cfg.sets;s++){const nr=s<cfg.sets-1||!isLast;ts.push({kind:"timer",phase:"work",label:name,sub:`Série ${s+1}/${cfg.sets}`,icon:ex.icon,dur:cfg.duration,next:nr?"Repos":null});if(nr){const nn=s===cfg.sets-1?(items[idx+1]?(items[idx+1].label??items[idx+1].exercise.name):null):name;ts.push({kind:"timer",phase:"rest",label:"REPOS",sub:name,dur:cfg.rest,next:nn??name});}}}
+    else{ts.push({kind:"reps",label:name,icon:ex.icon,cfg});}
+  });
+  steps.push({kind:"launch",first:items.length>0?(items[0].label??items[0].exercise.name):"Go"});
+  ts.forEach(s=>steps.push(s));steps.push({kind:"done"});return steps;
+}
+
+function Session({items,onClose}){
+  const steps=useRef(buildSteps(items));
+  const[idx,setIdx]=useState(0);const[t,setT]=useState(null);const[cdn,setCdn]=useState(null);const[go,setGo]=useState(false);
+  const ab=useRef(false);const iv=useRef(null);const sp=useRef(false);
+  const s=steps.current[idx];
+  const ts=steps.current.filter(x=>x.kind==="timer");
+  const done=steps.current.slice(0,idx).filter(x=>x.kind==="timer").length;
+  const prog=ts.length>0?done/ts.length:0;
+
+  async function start(){
+    ab.current=false;window.speechSynthesis.cancel();
+    await speakW(steps.current[0].first);if(ab.current)return;
+    await new Promise(res=>{[5,4,3,2,1].forEach((n,i)=>setTimeout(()=>{if(ab.current)return;setCdn(n);speakQ(String(n));if(n===1)setTimeout(res,900);},i*1000));});
+    if(ab.current)return;speakQ("Travail");await new Promise(r=>setTimeout(r,600));
+    if(ab.current)return;setCdn(null);setGo(true);run(1);
+  }
+  function run(i){
+    if(ab.current)return;const s=steps.current[i];if(!s)return;
+    setIdx(i);sp.current=false;
+    if(s.kind==="timer"){setT(s.dur);let tt=s.dur;
+      iv.current=setInterval(()=>{if(ab.current){clearInterval(iv.current);return;}tt--;setT(tt);
+        if(tt===5&&!sp.current&&s.next){sp.current=true;[5,4,3,2,1].forEach((n,j)=>setTimeout(()=>{if(!ab.current)speakQ(String(n));},j*1000));setTimeout(()=>{if(!ab.current)speakQ(s.next);},5000);}
+        if(tt<=0){clearInterval(iv.current);run(i+1);}},1000);}
+    else if(s.kind==="reps"){setT(null);speakQ(s.label);}
+    else if(s.kind==="done"){setT(null);speakQ("Workout terminé, bravo !");}
+  }
+  function skip(){clearInterval(iv.current);window.speechSynthesis.cancel();sp.current=true;const n=idx+1;if(steps.current[n])run(n);}
+  function stop(){ab.current=true;clearInterval(iv.current);window.speechSynthesis.cancel();onClose();}
+  useEffect(()=>()=>{ab.current=true;clearInterval(iv.current);window.speechSynthesis.cancel();},[]);
+
+  const isTmr=s?.kind==="timer";const isRp=s?.kind==="reps";const isDn=s?.kind==="done";
+  const ac=s?.phase==="rest"?"#00D9FF":s?.phase==="work"?"#FF0033":"#e8ff47";
+  const R=90;const C=2*Math.PI*R;const DO=isTmr&&t!==null?C*(t/s.dur):C;
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#080808",zIndex:300,display:"flex",flexDirection:"column",maxWidth:430,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",borderBottom:"1px solid #1a1a1a"}}>
+        <span style={{fontFamily:"monospace",fontSize:11,color:"#444",textTransform:"uppercase",letterSpacing:2}}>{isDn?"Terminé":!go?"Démarrage":`${done}/${ts.length}`}</span>
+        <button onClick={stop} style={{background:"none",border:"1px solid #fff",borderRadius:6,color:"#fff",padding:"4px 12px",cursor:"pointer",fontSize:11,fontFamily:"monospace"}}>Arrêter</button>
+      </div>
+      <div style={{height:2,background:"#1a1a1a"}}><div style={{height:"100%",width:`${prog*100}%`,background:ac,transition:"width .5s"}}/></div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
+        {!go&&<div style={{textAlign:"center"}}>{cdn===null?(<><div style={{fontSize:56,marginBottom:16}}>⚡</div><div style={{fontSize:22,fontWeight:900,color:"#fff",marginBottom:8}}>Prêt ?</div><div style={{fontSize:12,color:"#444",fontFamily:"monospace",marginBottom:32}}>{items.length} exercices · {ts.length} blocs</div><button onClick={start} style={{padding:"16px 48px",borderRadius:12,border:"none",background:"#e8ff47",color:"#000",fontWeight:900,fontSize:16,cursor:"pointer",fontFamily:"monospace"}}>DÉMARRER</button></>):(<><div style={{fontSize:13,color:"#555",fontFamily:"monospace",textTransform:"uppercase",letterSpacing:3,marginBottom:20}}>{steps.current[0].first}</div><div style={{fontSize:140,fontWeight:900,color:"#e8ff47",fontFamily:"monospace",lineHeight:1}}>{cdn}</div></>)}</div>}
+        {go&&isTmr&&<div style={{textAlign:"center"}}>
+          <div style={{fontSize:13,color:ac,fontFamily:"monospace",textTransform:"uppercase",letterSpacing:3,marginBottom:4}}>{s.label}</div>
+          <div style={{fontSize:11,color:"#333",fontFamily:"monospace",marginBottom:24}}>{s.sub}</div>
+          <div style={{position:"relative",width:220,height:220,margin:"0 auto"}}>
+            <svg width="220" height="220" style={{transform:"rotate(-90deg)"}}>
+              <circle cx="110" cy="110" r={R} fill="none" stroke="#1a1a1a" strokeWidth="8"/>
+              <circle cx="110" cy="110" r={R} fill="none" stroke={ac} strokeWidth="8" strokeDasharray={C} strokeDashoffset={DO} strokeLinecap="round" style={{transition:"stroke-dashoffset 1s linear"}}/>
+            </svg>
+            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              <div style={{fontSize:64,fontWeight:900,color:"#fff",fontFamily:"monospace",lineHeight:1}}>{t}</div>
+              <div style={{fontSize:12,color:"#444",fontFamily:"monospace",marginTop:4}}>sec</div>
+            </div>
+          </div>
+          {s.next&&<div style={{marginTop:16,fontSize:11,color:"#333",fontFamily:"monospace",textTransform:"uppercase",letterSpacing:2}}>Suivant → {s.next}</div>}
+          <button onClick={skip} style={{marginTop:24,padding:"10px 28px",borderRadius:8,border:"1px solid #fff",background:"#111",color:"#fff",fontSize:11,cursor:"pointer",fontFamily:"monospace"}}>Passer →</button>
+        </div>}
+        {go&&isRp&&<div style={{textAlign:"center"}}>
+          <div style={{fontSize:56,marginBottom:12}}>{s.icon}</div>
+          <div style={{fontSize:24,fontWeight:900,color:"#fff",marginBottom:4}}>{s.label}</div>
+          <div style={{fontSize:13,color:"#555",fontFamily:"monospace",marginBottom:8}}>{s.cfg.sets}×{s.cfg.reps} reps{s.cfg.weight>0?` · ${s.cfg.weight}kg`:""}</div>
+          <div style={{fontSize:11,color:"#333",fontFamily:"monospace",marginBottom:32}}>Repos : {s.cfg.rest}s</div>
+          <button onClick={skip} style={{padding:"12px 32px",borderRadius:10,border:"1px solid #e8ff4740",background:"#e8ff4710",color:"#e8ff47",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"monospace"}}>Suivant →</button>
+        </div>}
+        {isDn&&<div style={{textAlign:"center"}}>
+          <div style={{fontSize:72,marginBottom:16}}>🏆</div>
+          <div style={{fontSize:28,fontWeight:900,color:"#e8ff47",marginBottom:8}}>Workout terminé !</div>
+          <div style={{fontSize:12,color:"#444",fontFamily:"monospace",marginBottom:40}}>{items.length} exercices</div>
+          <button onClick={stop} style={{padding:"14px 40px",borderRadius:10,border:"none",background:"#e8ff47",color:"#000",fontWeight:900,fontSize:14,cursor:"pointer",fontFamily:"monospace"}}>Retour</button>
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+function Badge({cat,custom}){const c=custom?{bg:"#e8ff4720",text:"#e8ff47",border:"#e8ff4740"}:(CC[cat]||{});return<span style={{fontSize:10,fontFamily:"monospace",letterSpacing:1,padding:"2px 7px",borderRadius:3,background:c.bg,color:c.text,border:`1px solid ${c.border}`,textTransform:"uppercase"}}>{custom?"custom":cat}</span>;}
+const BS={width:24,height:24,borderRadius:4,border:"1px solid #333",background:"#1a1a1a",color:"#aaa",cursor:"pointer",fontSize:14};
+function NI({value,onChange,min=0,step=1,unit,label}){return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>{label&&<span style={{fontSize:9,color:"#666",textTransform:"uppercase",letterSpacing:1,fontFamily:"monospace"}}>{label}</span>}<div style={{display:"flex",alignItems:"center"}}><button onClick={()=>onChange(Math.max(min,value-step))} style={BS}>−</button><span style={{minWidth:32,textAlign:"center",fontSize:15,fontWeight:700,color:"#fff",fontFamily:"monospace"}}>{value}</span><button onClick={()=>onChange(value+step)} style={BS}>+</button></div>{unit&&<span style={{fontSize:9,color:"#555",fontFamily:"monospace"}}>{unit}</span>}</div>);}
+
+function ExCard({ex,onAdd,onDel}){return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",borderRadius:8,background:"#111",border:`1px solid ${ex.custom?"#e8ff4725":"#222"}`,marginBottom:6}} onMouseEnter={e=>e.currentTarget.style.borderColor=ex.custom?"#e8ff4760":"#444"} onMouseLeave={e=>e.currentTarget.style.borderColor=ex.custom?"#e8ff4725":"#222"}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:20}}>{ex.icon}</span><div><div style={{fontSize:13,fontWeight:600,color:"#eee"}}>{ex.name}</div><Badge cat={ex.category} custom={ex.custom}/></div></div><div style={{display:"flex",gap:6,alignItems:"center"}}>{ex.custom&&<button onClick={()=>onDel(ex.id)} style={{background:"none",border:"1px solid #2a2a2a",borderRadius:5,color:"#444",cursor:"pointer",fontSize:12,padding:"2px 6px"}}>🗑</button>}<button onClick={()=>onAdd(ex)} style={{width:28,height:28,borderRadius:6,border:"none",background:"#e8ff47",color:"#000",fontWeight:900,fontSize:18,cursor:"pointer"}}>+</button></div></div>);}
+
+function WEx({item,onRm,onUp,onDS,onDO,onDp,drag}){
+  const ex=item.exercise;const cfg=item.config;const isH=ex.type==="hiit";const isTm=ex.type==="time";
+  const[edit,setEdit]=useState(false);const lbl=item.label??ex.name;
+  return(<div draggable onDragStart={()=>onDS(item.id)} onDragOver={e=>{e.preventDefault();onDO(item.id);}} onDrop={()=>onDp(item.id)} style={{borderRadius:10,border:`1px solid ${drag?"#e8ff4760":"#2a2a2a"}`,background:"#0f0f0f",marginBottom:10,overflow:"hidden",opacity:drag?0.45:1}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"#151515",borderBottom:"1px solid #222"}}>
+      <span style={{fontSize:16,color:"#2a2a2a",marginRight:6,cursor:"grab",userSelect:"none",flexShrink:0}}>⠿</span>
+      <div style={{flex:1,display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+        <span style={{fontSize:18,flexShrink:0}}>{ex.icon}</span>
+        {edit?<input autoFocus value={lbl} onChange={e=>onUp(item.id,{label:e.target.value})} onBlur={()=>setEdit(false)} onKeyDown={e=>e.key==="Enter"&&setEdit(false)} style={{background:"none",border:"none",borderBottom:"1px solid #e8ff47",color:"#fff",fontSize:13,fontWeight:700,outline:"none",flex:1,minWidth:0}}/>
+        :<span onClick={()=>setEdit(true)} style={{fontSize:14,fontWeight:700,color:"#fff",cursor:"text",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lbl}{lbl!==ex.name&&<span style={{fontSize:10,color:"#444",marginLeft:6}}>({ex.name})</span>}</span>}
+        <Badge cat={ex.category} custom={ex.custom}/>
+      </div>
+      <button onClick={()=>onRm(item.id)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:18,flexShrink:0}}>×</button>
+    </div>
+    <div style={{padding:"12px 14px"}}>
+      {isH&&<div style={{display:"flex",justifyContent:"space-around"}}><NI label="Travail" value={cfg.work} onChange={v=>onUp(item.id,{work:v})} min={5} step={5} unit="sec"/><NI label="Repos" value={cfg.rest} onChange={v=>onUp(item.id,{rest:v})} min={0} step={5} unit="sec"/><NI label="Rounds" value={cfg.rounds} onChange={v=>onUp(item.id,{rounds:v})} min={1}/></div>}
+      {isTm&&<div style={{display:"flex",justifyContent:"space-around"}}><NI label="Durée" value={cfg.duration} onChange={v=>onUp(item.id,{duration:v})} min={5} step={5} unit="sec"/><NI label="Repos" value={cfg.rest} onChange={v=>onUp(item.id,{rest:v})} min={0} step={5} unit="sec"/><NI label="Séries" value={cfg.sets} onChange={v=>onUp(item.id,{sets:v})} min={1}/></div>}
+      {!isH&&!isTm&&<div style={{display:"flex",justifyContent:"space-around"}}><NI label="Séries" value={cfg.sets} onChange={v=>onUp(item.id,{sets:v})} min={1}/><NI label="Reps" value={cfg.reps} onChange={v=>onUp(item.id,{reps:v})} min={1}/><NI label="Poids" value={cfg.weight} onChange={v=>onUp(item.id,{weight:v})} min={0} step={2.5} unit="kg"/><NI label="Repos" value={cfg.rest} onChange={v=>onUp(item.id,{rest:v})} min={0} step={5} unit="sec"/></div>}
+      <div style={{marginTop:10,textAlign:"center"}}><span style={{fontSize:10,fontFamily:"monospace",color:"#555",background:"#1a1a1a",padding:"3px 10px",borderRadius:20,border:"1px solid #222"}}>{isH&&`${cfg.rounds}×${cfg.work}s/${cfg.rest}s`}{isTm&&`${cfg.sets}×${cfg.duration}s • repos ${cfg.rest}s`}{!isH&&!isTm&&`${cfg.sets}×${cfg.reps} reps${cfg.weight>0?` @${cfg.weight}kg`:""} • repos ${cfg.rest}s`}</span></div>
+    </div>
+  </div>);
+}
+
+function Modal({onClose,onCreate}){
+  const[name,setName]=useState("");const[cat,setCat]=useState("Bodyweight");const[type,setType]=useState("reps");const[icon,setIcon]=useState("🎯");
+  function sub(){if(!name.trim())return;onCreate({id:"c_"+uid(),name:name.trim(),category:cat,type,icon,custom:true});onClose();}
+  const pill=(a)=>({padding:"6px 12px",borderRadius:20,border:"1px solid",borderColor:a?"#e8ff47":"#2a2a2a",background:a?"#e8ff4715":"transparent",color:a?"#e8ff47":"#555",fontSize:11,cursor:"pointer",fontFamily:"monospace"});
+  return(<div style={{position:"fixed",inset:0,background:"#000c",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{width:"100%",maxWidth:430,background:"#0f0f0f",borderRadius:"16px 16px 0 0",border:"1px solid #2a2a2a",padding:"20px 20px 36px",boxSizing:"border-box"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><span style={{fontSize:15,fontWeight:700,color:"#fff"}}>Nouvel exercice</span><button onClick={onClose} style={{background:"none",border:"none",color:"#555",fontSize:22,cursor:"pointer"}}>×</button></div>
+      <div style={{marginBottom:16}}><span style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:1,fontFamily:"monospace",display:"block",marginBottom:6}}>Nom</span><input style={{width:"100%",background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:7,padding:"10px 12px",color:"#fff",fontSize:14,outline:"none",boxSizing:"border-box"}} value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Typewriter Pull-up" autoFocus onKeyDown={e=>e.key==="Enter"&&sub()}/></div>
+      <div style={{marginBottom:16}}><span style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:1,fontFamily:"monospace",display:"block",marginBottom:6}}>Catégorie</span><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{CATS.filter(c=>c!=="Tous").map(c=><button key={c} style={pill(cat===c)} onClick={()=>setCat(c)}>{c}</button>)}</div></div>
+      <div style={{marginBottom:16}}><span style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:1,fontFamily:"monospace",display:"block",marginBottom:6}}>Type</span><div style={{display:"flex",gap:6}}>{TYPES.map(t=><button key={t} style={pill(type===t)} onClick={()=>setType(t)}>{t==="reps"?"Reps":t==="time"?"Durée":"HIIT"}</button>)}</div></div>
+      <div style={{marginBottom:20}}><span style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:1,fontFamily:"monospace",display:"block",marginBottom:6}}>Icône : {icon}</span><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{ICONS.map(ic=><button key={ic} onClick={()=>setIcon(ic)} style={{width:36,height:36,borderRadius:8,border:`1px solid ${icon===ic?"#e8ff47":"#2a2a2a"}`,background:icon===ic?"#e8ff4715":"#1a1a1a",fontSize:18,cursor:"pointer"}}>{ic}</button>)}</div></div>
+      <button onClick={sub} disabled={!name.trim()} style={{width:"100%",padding:"13px 0",borderRadius:10,border:"none",background:name.trim()?"#e8ff47":"#1a1a1a",color:name.trim()?"#000":"#333",fontWeight:900,fontSize:14,cursor:name.trim()?"pointer":"default",fontFamily:"monospace"}}>Créer l'exercice</button>
+    </div>
+  </div>);
+}
+
+function App(){
+  const[tab,setTab]=useState("builder");
+  const[cat,setCat]=useState("Tous");
+  const[q,setQ]=useState("");
+  const[wname,setWname]=useState("Mon Workout");
+  const[items,setItems]=useState([]);
+  const[showCat,setShowCat]=useState(true);
+  const[editName,setEditName]=useState(false);
+  const[showModal,setShowModal]=useState(false);
+  const[session,setSession]=useState(null);
+  const[ewid,setEwid]=useState(null);
+  const[saved,setSaved]=useState(()=>load("wk_workouts",[]));
+  const[custom,setCustom]=useState(()=>load("wk_custom_ex",[]));
+  useEffect(()=>save("wk_workouts",saved),[saved]);
+  useEffect(()=>save("wk_custom_ex",custom),[custom]);
+
+  const all=[...EXERCISE_DB,...custom];
+  const filtered=all.filter(ex=>(cat==="Tous"||ex.category===cat)&&ex.name.toLowerCase().includes(q.toLowerCase()));
+
+  const addEx=(ex)=>setItems(p=>[...p,{id:uid(),exercise:ex,config:makeSet(ex.type)}]);
+  const rmEx=(id)=>setItems(p=>p.filter(i=>i.id!==id));
+  const upEx=(id,patch)=>{const{label,...cp}=patch;setItems(p=>p.map(i=>i.id!==id?i:{...i,...(label!==undefined?{label}:{}),config:Object.keys(cp).length>0?{...i.config,...cp}:i.config}));};
+  const addC=(ex)=>setCustom(p=>[...p,ex]);
+  const delC=(id)=>setCustom(p=>p.filter(e=>e.id!==id));
+
+  const drag=useRef(null);const[over,setOver]=useState(null);
+  const dStart=(id)=>{drag.current=id;};
+  const dOver=(id)=>{if(id!==drag.current)setOver(id);};
+  const dDrop=(tid)=>{if(!drag.current||drag.current===tid){drag.current=null;setOver(null);return;}setItems(p=>{const a=[...p];const f=a.findIndex(i=>i.id===drag.current);const t=a.findIndex(i=>i.id===tid);const[m]=a.splice(f,1);a.splice(t,0,m);return a;});drag.current=null;setOver(null);};
+
+  function savW(){if(!items.length)return;const d=new Date().toLocaleDateString("fr-CA");if(ewid){setSaved(p=>p.map(w=>w.id===ewid?{...w,name:wname,items:[...items],date:d}:w));}else{setSaved(p=>[{id:uid(),name:wname,items:[...items],date:d},...p]);}setItems([]);setWname("Mon Workout");setEwid(null);setTab("workouts");}
+  const loadW=(w)=>{setItems(w.items);setWname(w.name);setEwid(w.id);setTab("builder");};
+  const delW=(id)=>{setSaved(p=>p.filter(w=>w.id!==id));if(ewid===id){setEwid(null);setItems([]);setWname("Mon Workout");}};
+
+  const mins=(its)=>Math.floor(its.reduce((a,i)=>{const c=i.config;if(i.exercise.type==="hiit")return a+c.rounds*(c.work+c.rest);if(i.exercise.type==="time")return a+c.sets*(c.duration+c.rest);return a+c.sets*(c.rest+30);},0)/60);
+
+  if(session)return<Session items={session} onClose={()=>setSession(null)}/>;
+
+  const T=(a)=>({flex:1,padding:"8px 0",border:"none",cursor:"pointer",background:a?"#e8ff47":"#111",color:a?"#000":"#555",fontWeight:700,fontSize:12,fontFamily:"monospace",textTransform:"uppercase",letterSpacing:1});
+  const CP=(a)=>({padding:"5px 12px",borderRadius:20,border:"1px solid",borderColor:a?"#e8ff47":"#2a2a2a",background:a?"#e8ff4715":"transparent",color:a?"#e8ff47":"#555",fontSize:11,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"monospace"});
+
+  return(<>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+    <div style={{minHeight:"100vh",background:"#080808",color:"#fff",fontFamily:"DM Sans,sans-serif",maxWidth:430,margin:"0 auto",display:"flex",flexDirection:"column"}}>
+      <div style={{padding:"18px 16px 10px",background:"#080808",borderBottom:"1px solid #1a1a1a",position:"sticky",top:0,zIndex:50}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:20}}>⚡</span><span style={{fontWeight:900,fontSize:17}}>WORK<span style={{color:"#e8ff47"}}>OUT</span></span></div>
+          {items.length>0&&<span style={{fontSize:10,color:"#555",fontFamily:"monospace"}}>{items.length} ex · ~{mins(items)}min</span>}
+        </div>
+        <div style={{display:"flex",border:"1px solid #222",borderRadius:8,overflow:"hidden"}}>
+          <button style={T(tab==="builder")} onClick={()=>setTab("builder")}>Builder</button>
+          <button style={T(tab==="workouts")} onClick={()=>setTab("workouts")}>Workouts{saved.length>0?` (${saved.length})`:""}</button>
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",paddingBottom:90}}>
+        {tab==="builder"&&<>
+          <div style={{padding:"12px 16px 0"}}>
+            {editName?<input value={wname} onChange={e=>setWname(e.target.value)} onBlur={()=>setEditName(false)} onKeyDown={e=>e.key==="Enter"&&setEditName(false)} autoFocus style={{background:"none",border:"none",borderBottom:"2px solid #e8ff47",color:"#fff",fontSize:20,fontWeight:900,outline:"none",width:"100%"}}/>
+            :<div onClick={()=>setEditName(true)} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}><h2 style={{margin:0,fontSize:20,fontWeight:900,color:"#fff"}}>{wname}</h2><span style={{fontSize:12,color:"#444"}}>✏️</span></div>}
+          </div>
+          {items.length>0&&<><div style={{fontSize:10,fontWeight:700,color:"#444",letterSpacing:2,textTransform:"uppercase",fontFamily:"monospace",padding:"14px 16px 8px"}}>Exercices ajoutés</div>
+          <div style={{padding:"0 16px"}}>{items.map(item=><WEx key={item.id} item={item} onRm={rmEx} onUp={upEx} onDS={dStart} onDO={dOver} onDp={dDrop} drag={over===item.id}/>)}</div></>}
+          <div style={{padding:"8px 16px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#444",letterSpacing:2,textTransform:"uppercase",fontFamily:"monospace",padding:"6px 0"}}>Catalogue{custom.length>0&&<span style={{color:"#e8ff47"}}> +{custom.length}</span>}</div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>setShowModal(true)} style={{background:"#e8ff4715",border:"1px solid #e8ff4740",borderRadius:6,color:"#e8ff47",padding:"3px 10px",cursor:"pointer",fontSize:11,fontFamily:"monospace"}}>+ Créer</button>
+              <button onClick={()=>setShowCat(p=>!p)} style={{background:"none",border:"1px solid #222",borderRadius:6,color:"#555",padding:"3px 10px",cursor:"pointer",fontSize:11,fontFamily:"monospace"}}>{showCat?"Masquer":"Afficher"}</button>
+            </div>
+          </div>
+          {showCat&&<div style={{padding:"0 16px"}}>
+            <input style={{width:"100%",background:"#111",border:"1px solid #222",borderRadius:8,padding:"9px 14px",color:"#fff",fontSize:13,outline:"none",boxSizing:"border-box"}} placeholder="Rechercher..." value={q} onChange={e=>setQ(e.target.value)}/>
+            <div style={{display:"flex",gap:6,overflowX:"auto",padding:"10px 0",scrollbarWidth:"none"}}>{CATS.map(c=><button key={c} style={CP(cat===c)} onClick={()=>setCat(c)}>{c}</button>)}</div>
+            {filtered.length===0?<div style={{color:"#444",textAlign:"center",padding:"24px 0",fontFamily:"monospace",fontSize:12}}>Aucun résultat</div>:filtered.map(ex=><ExCard key={ex.id} ex={ex} onAdd={addEx} onDel={delC}/>)}
+          </div>}
+          <div style={{position:"fixed",bottom:16,left:"50%",transform:"translateX(-50%)",width:"calc(100% - 32px)",maxWidth:398,display:"flex",gap:8,zIndex:100}}>
+            <button onClick={savW} disabled={!items.length} style={{flex:1,padding:"14px 0",borderRadius:10,border:"none",background:items.length?"#e8ff47":"#1a1a1a",color:items.length?"#000":"#333",fontWeight:900,fontSize:13,cursor:items.length?"pointer":"default",fontFamily:"monospace"}}>
+              {items.length?(ewid?"💾 Écraser":"💾 Sauvegarder"):"Ajoutez des exercices"}
+            </button>
+            {items.length>0&&<button onClick={()=>setSession(items)} style={{padding:"14px 18px",borderRadius:10,border:"none",background:"#FF0033",color:"#fff",fontWeight:900,fontSize:13,cursor:"pointer",fontFamily:"monospace",whiteSpace:"nowrap"}}>▶ GO</button>}
+          </div>
+        </>}
+        {tab==="workouts"&&<div style={{padding:"0 16px"}}>
+          {saved.length===0?<div style={{textAlign:"center",padding:"60px 20px",color:"#333",fontFamily:"monospace",fontSize:12,lineHeight:2}}><div style={{fontSize:40,marginBottom:12}}>📋</div>Aucun workout.<br/>Créez-en un !</div>
+          :<>{<div style={{fontSize:10,fontWeight:700,color:"#444",letterSpacing:2,textTransform:"uppercase",fontFamily:"monospace",padding:"14px 0 8px"}}>Sauvegardés</div>}
+          {saved.map(w=><div key={w.id} style={{borderRadius:10,border:"1px solid #222",background:"#0f0f0f",marginBottom:10,overflow:"hidden"}}>
+            <div style={{padding:"12px 14px",background:"#141414",borderBottom:"1px solid #1e1e1e",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><div style={{fontSize:15,fontWeight:700,color:"#fff"}}>{w.name}</div><div style={{fontSize:10,color:"#444",fontFamily:"monospace",marginTop:2}}>{w.date} · {w.items.length} ex · ~{mins(w.items)}min</div></div>
+              <button onClick={()=>delW(w.id)} style={{background:"none",border:"1px solid #2a2a2a",borderRadius:6,color:"#555",padding:"4px 8px",cursor:"pointer",fontSize:11}}>🗑</button>
+            </div>
+            <div style={{padding:"10px 14px"}}>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:10}}>{w.items.map(i=><span key={i.id} style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"#1a1a1a",color:"#666",border:"1px solid #222",fontFamily:"monospace"}}>{i.exercise.icon} {i.exercise.name}</span>)}</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>loadW(w)} style={{flex:1,padding:"9px 0",borderRadius:7,border:"1px solid #e8ff4740",background:"#e8ff4710",color:"#e8ff47",fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"monospace"}}>Charger →</button>
+                <button onClick={()=>setSession(w.items)} style={{padding:"9px 16px",borderRadius:7,border:"none",background:"#FF0033",color:"#fff",fontWeight:900,cursor:"pointer",fontSize:12,fontFamily:"monospace"}}>▶ GO</button>
+              </div>
+            </div>
+          </div>)}</>}
+        </div>}
+      </div>
+    </div>
+    {showModal&&<Modal onClose={()=>setShowModal(false)} onCreate={addC}/>}
+  </>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
 </body>
 </html>
